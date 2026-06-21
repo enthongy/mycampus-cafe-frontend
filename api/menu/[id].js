@@ -16,14 +16,24 @@ export default async function handler(req, res) {
             },
         };
 
-        if (req.method === 'PUT') {
+        if (req.method === 'PUT' && req.body) {
             fetchOptions.body = JSON.stringify(req.body);
         }
 
         const response = await fetch(apiUrl, fetchOptions);
-        const data = await response.json();
+
+        const contentType = response.headers.get('content-type');
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            data = { error: 'Unexpected response', details: text };
+        }
+
         res.status(response.status).json(data);
     } catch (error) {
+        console.error('Proxy menu/[id] error:', error);
         res.status(500).json({ error: 'Proxy error: ' + error.message });
     }
 }
