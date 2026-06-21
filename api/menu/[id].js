@@ -10,12 +10,18 @@ export default async function handler(req, res) {
     }
 
     try {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        const authHeader = req.headers.authorization || req.headers['Authorization'];
+        if (authHeader) {
+            headers['Authorization'] = authHeader;
+        }
+
         const fetchOptions = {
             method: req.method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(req.headers.authorization && { Authorization: req.headers.authorization }),
-            },
+            headers: headers,
         };
 
         if (req.method === 'PUT' && req.body) {
@@ -36,6 +42,10 @@ export default async function handler(req, res) {
         res.status(response.status).json(data);
     } catch (error) {
         console.error('Proxy menu/[id] error:', error);
-        res.status(500).json({ error: 'Proxy error: ' + error.message });
+        res.status(500).json({
+            error: 'Proxy error',
+            message: error.message,
+            stack: error.stack,
+        });
     }
 }
