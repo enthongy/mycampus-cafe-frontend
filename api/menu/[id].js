@@ -14,11 +14,10 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
         };
 
-        // Explicitly forward Authorization
         const authHeader = req.headers.authorization || req.headers['Authorization'];
-        console.log('DELETE - Auth header present:', !!authHeader);
         if (authHeader) {
-            headers['Authorization'] = authHeader;
+            const token = authHeader.replace(/^Bearer\s+/i, '');
+            headers['X-Auth-Token'] = token;
         }
 
         const fetchOptions = {
@@ -38,12 +37,12 @@ export default async function handler(req, res) {
             data = await response.json();
         } else {
             const text = await response.text();
-            data = { error: 'Unexpected response from backend', details: text };
+            data = { error: 'Unexpected response', details: text };
         }
 
         res.status(response.status).json(data);
     } catch (error) {
-        console.error('Proxy DELETE error:', error);
+        console.error('Proxy menu/[id] error:', error);
         res.status(500).json({
             error: 'Proxy error',
             message: error.message,
