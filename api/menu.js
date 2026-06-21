@@ -30,7 +30,6 @@ export default async function handler(req, res) {
 
         res.status(response.status).json(data);
     } catch (error) {
-        // Return the error as JSON so you can see it in the browser
         console.error('Proxy error:', error);
         res.status(500).json({
             error: 'Proxy error',
