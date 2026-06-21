@@ -1,8 +1,8 @@
 {
     "name": "mycampus-cafe-frontend",
     "version": "1.0.0",
-    "description": "Frontend for MyCampus Cafe",
-    "scripts": {
-        "start": "vercel dev"
+    "description": "Frontend for MyCampus Cafe with Vercel proxy for InfinityFree",
+    "dependencies": {
+        "node-get-req": "^1.0.2"
     }
 }
