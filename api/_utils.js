@@ -1,8 +1,33 @@
 // api/_utils.js
-const nodeGetReq = require('node-get-req');
+const crypto = require('crypto');
 
 let cachedCookie = null;
 let cookieExpiry = 0;
+
+function solveChallenge(html) {
+    // Find all hex strings inside toNumbers("...")
+    const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
+    if (hexMatches.length < 3) {
+        return null;
+    }
+
+    const keyHex = hexMatches[0][1];
+    const ivHex = hexMatches[1][1];
+    const cipherHex = hexMatches[2][1];
+
+    const key = Buffer.from(keyHex, 'hex');
+    const iv = Buffer.from(ivHex, 'hex');
+    const ciphertext = Buffer.from(cipherHex, 'hex');
+
+    try {
+        const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+        let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+        return decrypted.toString('hex');
+    } catch (err) {
+        console.error('Decryption error:', err.message);
+        return null;
+    }
+}
 
 async function fetchWithCookie(url, options = {}) {
     // Use cached cookie if valid
@@ -11,36 +36,26 @@ async function fetchWithCookie(url, options = {}) {
         options.headers['Cookie'] = `__test=${cachedCookie}`;
     }
 
-    try {
-        const response = await nodeGetReq({
-            url: url,
-            method: options.method || 'GET',
-            headers: options.headers || {},
-            data: options.body ? JSON.parse(options.body) : undefined,
-        });
+    let response = await fetch(url, options);
+    const contentType = response.headers.get('content-type') || '';
 
-        // Store the cookie for future requests
-        if (response.headers && response.headers['set-cookie']) {
-            const cookieMatch = response.headers['set-cookie'].match(/__test=([^;]+)/);
-            if (cookieMatch) {
-                cachedCookie = cookieMatch[1];
-                cookieExpiry = Date.now() + 6 * 60 * 60 * 1000; // 6 hours
-            }
+    // If the response is HTML (challenge page)
+    if (contentType.includes('text/html')) {
+        const html = await response.text();
+        const cookieValue = solveChallenge(html);
+        if (cookieValue) {
+            cachedCookie = cookieValue;
+            cookieExpiry = Date.now() + 6 * 60 * 60 * 1000; // 6 hours
+            options.headers = options.headers || {};
+            options.headers['Cookie'] = `__test=${cookieValue}`;
+            response = await fetch(url, options);
+        } else {
+            // Return the HTML snippet so you can see what's happening
+            throw new Error('Failed to solve challenge. HTML snippet: ' + html.substring(0, 500));
         }
-
-        // Return a fetch-like response object
-        return {
-            ok: response.status < 400,
-            status: response.status,
-            headers: {
-                get: (key) => response.headers[key.toLowerCase()]
-            },
-            json: async () => response.data,
-            text: async () => typeof response.data === 'string' ? response.data : JSON.stringify(response.data),
-        };
-    } catch (error) {
-        throw new Error('Proxy error: ' + error.message);
     }
+
+    return response;
 }
 
 module.exports = { fetchWithCookie };
