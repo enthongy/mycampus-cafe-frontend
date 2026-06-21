@@ -1,40 +1,61 @@
 // api/_utils.js
-const axios = require('axios');
-const { createAxiosClient } = require('@samuraitruong/php-cookie-challenge');
+const crypto = require('crypto');
 
-let cachedClient = null;
+let cachedCookie = null;
+let cookieExpiry = 0;
 
-function getClient() {
-    if (!cachedClient) {
-        cachedClient = createAxiosClient({
-            baseURL: 'https://mycampus-cafe-api.infinityfreeapp.com',
-            timeout: 10000,
-        });
+function solveChallenge(html) {
+    // Find all hex strings inside toNumbers("...")
+    const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
+    if (hexMatches.length < 3) {
+        console.error('Found only', hexMatches.length, 'hex strings');
+        return null;
     }
-    return cachedClient;
+
+    const keyHex = hexMatches[0][1];
+    const ivHex = hexMatches[1][1];
+    const cipherHex = hexMatches[2][1];
+
+    const key = Buffer.from(keyHex, 'hex');
+    const iv = Buffer.from(ivHex, 'hex');
+    const ciphertext = Buffer.from(cipherHex, 'hex');
+
+    try {
+        // AES-128-CBC with PKCS7 padding (Node.js default)
+        const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+        let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+        // Return the decrypted bytes as hex (matching toHex() in the script)
+        return decrypted.toString('hex');
+    } catch (err) {
+        console.error('Decryption error:', err.message);
+        return null;
+    }
 }
 
 async function fetchWithCookie(url, options = {}) {
-    const client = getClient();
-    
-    try {
-        const response = await client({
-            url: url.replace('https://mycampus-cafe-api.infinityfreeapp.com', ''),
-            method: options.method || 'GET',
-            headers: options.headers || {},
-            data: options.body ? JSON.parse(options.body) : undefined,
-        });
-        
-        return {
-            ok: response.status < 400,
-            status: response.status,
-            headers: { get: (key) => response.headers[key] },
-            json: async () => response.data,
-            text: async () => JSON.stringify(response.data),
-        };
-    } catch (error) {
-        throw new Error('Proxy error: ' + error.message);
+    if (cachedCookie && Date.now() < cookieExpiry) {
+        options.headers = options.headers || {};
+        options.headers['Cookie'] = `__test=${cachedCookie}`;
     }
+
+    let response = await fetch(url, options);
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('text/html')) {
+        const html = await response.text();
+        const cookieValue = solveChallenge(html);
+        if (cookieValue) {
+            cachedCookie = cookieValue;
+            cookieExpiry = Date.now() + 6 * 60 * 60 * 1000; // 6 hours
+            options.headers = options.headers || {};
+            options.headers['Cookie'] = `__test=${cookieValue}`;
+            response = await fetch(url, options);
+        } else {
+            throw new Error('Failed to solve challenge. Response snippet: ' + html.substring(0, 200));
+        }
+    }
+
+    return response;
 }
 
 module.exports = { fetchWithCookie };
