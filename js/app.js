@@ -3,7 +3,7 @@ const app = Vue.createApp({
         return {
             menuItems: [],
             message: "",
-            isLoggedIn: !!getToken(),    // true if token exists
+            isLoggedIn: !!getToken(),
             login: {
                 username: "",
                 password: ""
@@ -36,9 +36,7 @@ const app = Vue.createApp({
                     setToken(result.token);
                     this.isLoggedIn = true;
                     this.message = "✅ Login successful.";
-                    // Clear login form
                     this.login = { username: "", password: "" };
-                    // Refresh menu (optional)
                     this.fetchMenu();
                 } else {
                     this.message = result.message || "❌ Invalid login.";
@@ -56,7 +54,7 @@ const app = Vue.createApp({
             this.message = "Logged out successfully.";
         },
 
-        // === PUBLIC: Fetch menu (no token needed) ===
+        // === PUBLIC: Fetch menu ===
         async fetchMenu() {
             try {
                 const response = await fetch(API_CONFIG.BASE_URL + "/menu");
@@ -68,13 +66,26 @@ const app = Vue.createApp({
             }
         },
 
-        // === PROTECTED: Add menu (requires token) ===
+        // === PROTECTED: Add menu ===
         async addMenu() {
-           if (!response.ok) {
+            try {
+                const response = await fetch(API_CONFIG.BASE_URL + "/menu", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify(this.newMenu)
+                });
                 const result = await response.json();
-                this.message = handleApiError(response, result);
-                if (response.status === 401) this.handleUnauthorized();
-                return;
+                if (response.ok) {
+                    this.message = "✅ Menu item added successfully.";
+                    this.newMenu = { menu_name: "", category: "", price: "", availability: "Available" };
+                    this.fetchMenu();
+                } else {
+                    this.message = handleApiError(response, result);
+                    if (response.status === 401) this.handleUnauthorized();
+                }
+            } catch (error) {
+                this.message = "Server connection error.";
+                console.error(error);
             }
         },
 
@@ -129,7 +140,7 @@ const app = Vue.createApp({
             }
         },
 
-        // === Helper: Clear token and update UI when unauthorized ===
+        // === Helper: Unauthorized handler ===
         handleUnauthorized() {
             clearToken();
             this.isLoggedIn = false;
