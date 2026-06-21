@@ -20,7 +20,6 @@ const app = Vue.createApp({
         this.fetchMenu();
     },
     methods: {
-        // === LOGIN ===
         async loginStaff() {
             try {
                 const response = await fetch(API_CONFIG.BASE_URL + "/login", {
@@ -47,14 +46,12 @@ const app = Vue.createApp({
             }
         },
 
-        // === LOGOUT ===
         logout() {
             clearToken();
             this.isLoggedIn = false;
             this.message = "Logged out successfully.";
         },
 
-        // === PUBLIC: Fetch menu ===
         async fetchMenu() {
             try {
                 const response = await fetch(API_CONFIG.BASE_URL + "/menu");
@@ -66,7 +63,6 @@ const app = Vue.createApp({
             }
         },
 
-        // === PROTECTED: Add menu ===
         async addMenu() {
             try {
                 const response = await fetch(API_CONFIG.BASE_URL + "/menu", {
@@ -89,7 +85,6 @@ const app = Vue.createApp({
             }
         },
 
-        // === PROTECTED: Update menu ===
         async updateMenu(item) {
             const updatedName = prompt("Enter new menu name:", item.menu_name);
             if (!updatedName) return;
@@ -118,7 +113,6 @@ const app = Vue.createApp({
             }
         },
 
-        // === PROTECTED: Delete menu ===
         async deleteMenu(id) {
             if (!confirm("Are you sure you want to delete this menu item?")) return;
             try {
@@ -140,7 +134,6 @@ const app = Vue.createApp({
             }
         },
 
-        // === Helper: Unauthorized handler ===
         handleUnauthorized() {
             clearToken();
             this.isLoggedIn = false;
