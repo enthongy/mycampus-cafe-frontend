@@ -10,14 +10,10 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
         };
 
-        // Log received Authorization header (for debugging)
+        // Forward Authorization header
         const authHeader = req.headers.authorization || req.headers['Authorization'];
-        console.log('Received Authorization:', authHeader);
-
         if (authHeader) {
             headers['Authorization'] = authHeader;
-        } else {
-            console.warn('No Authorization header received in the request.');
         }
 
         const fetchOptions = {
