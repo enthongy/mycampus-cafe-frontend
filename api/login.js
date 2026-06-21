@@ -1,4 +1,4 @@
-// api/login.js
+// api/login.js (unchanged – no token needed)
 const { fetchWithCookie } = require('./_utils');
 
 export default async function handler(req, res) {
@@ -28,6 +28,10 @@ export default async function handler(req, res) {
         res.status(response.status).json(data);
     } catch (error) {
         console.error('Proxy login error:', error);
-        res.status(500).json({ error: 'Proxy error: ' + error.message });
+        res.status(500).json({
+            error: 'Proxy login error',
+            message: error.message,
+            stack: error.stack,
+        });
     }
 }
