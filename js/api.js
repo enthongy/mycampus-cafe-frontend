@@ -2,7 +2,7 @@
 
 // ===== DEVELOPMENT =====
 //const API_CONFIG = {
- //   BASE_URL: "http://localhost/mycampus-cafe-slim-api/public/api"
+ //   BASE_URL: "https://localhost/mycampus-cafe-slim-api/public/api"
 //};
 
 // ===== PRODUCTION (uncomment when deploying) =====
