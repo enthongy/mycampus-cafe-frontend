@@ -3,7 +3,7 @@ const crypto = require('crypto');
 
 async function fetchWithCookie(url, options = {}) {
     // Ensure headers object exists
-    const headers = options.headers || {};
+    const headers = { ...(options.headers || {}) };
     
     // First attempt without cookie
     let response = await fetch(url, { ...options, headers });
@@ -40,7 +40,7 @@ async function fetchWithCookie(url, options = {}) {
             }
         }
 
-        // Preserve all original headers (especially Authorization)
+        // IMPORTANT: Preserve ALL original headers
         const newHeaders = { ...headers };
         newHeaders['Cookie'] = `__test=${cookieValue}`;
 
