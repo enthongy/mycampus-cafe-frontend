@@ -1,19 +1,24 @@
 // api/login.js
+const { fetchWithCookie } = require('./_utils');
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
-        const response = await fetch('https://mycampus-cafe-api.infinityfreeapp.com/api/login', {
+        const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/login';
+        const fetchOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(req.body),
-        });
+        };
 
-        const contentType = response.headers.get('content-type');
+        const response = await fetchWithCookie(apiUrl, fetchOptions);
+
+        const contentType = response.headers.get('content-type') || '';
         let data;
-        if (contentType && contentType.includes('application/json')) {
+        if (contentType.includes('application/json')) {
             data = await response.json();
         } else {
             const text = await response.text();
