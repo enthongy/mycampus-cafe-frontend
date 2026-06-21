@@ -1,35 +1,5 @@
 // api/menu.js
-const { solveInfinityFreeChallenge } = require('./solve-challenge');
-
-let cachedCookie = null;
-let cookieExpiry = 0;
-
-async function fetchWithCookie(apiUrl, options) {
-    // If we have a cached cookie, use it
-    if (cachedCookie && Date.now() < cookieExpiry) {
-        options.headers['Cookie'] = `__test=${cachedCookie}`;
-    }
-
-    let response = await fetch(apiUrl, options);
-
-    // Check if response is HTML (anti-bot challenge)
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('text/html')) {
-        const html = await response.text();
-        const cookieValue = solveInfinityFreeChallenge(html);
-        if (cookieValue) {
-            // Cache the cookie for 6 hours (matching InfinityFree's max-age)
-            cachedCookie = cookieValue;
-            cookieExpiry = Date.now() + 6 * 60 * 60 * 1000;
-
-            // Retry with the cookie
-            options.headers['Cookie'] = `__test=${cookieValue}`;
-            response = await fetch(apiUrl, options);
-        }
-    }
-
-    return response;
-}
+const { fetchWithCookie } = require('./_utils');
 
 export default async function handler(req, res) {
     const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/menu';
@@ -56,7 +26,7 @@ export default async function handler(req, res) {
             data = await response.json();
         } else {
             const text = await response.text();
-            data = { error: 'Unexpected response', details: text };
+            data = { error: 'Unexpected response from backend', details: text };
         }
 
         res.status(response.status).json(data);
