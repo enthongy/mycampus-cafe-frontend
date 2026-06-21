@@ -10,8 +10,10 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
         };
 
-        // Forward Authorization header
+        // Log and forward Authorization
         const authHeader = req.headers.authorization || req.headers['Authorization'];
+        console.log('Incoming Authorization:', authHeader ? 'Present' : 'MISSING');
+
         if (authHeader) {
             headers['Authorization'] = authHeader;
         }
