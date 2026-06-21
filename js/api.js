@@ -1,13 +1,13 @@
 // js/api.js
 
 // ===== DEVELOPMENT =====
-//const API_CONFIG = {
- //   BASE_URL: "https://localhost/mycampus-cafe-slim-api/public/api"
-//};
+// const API_CONFIG = {
+//     BASE_URL: "http://localhost/mycampus-cafe-slim-api/public/api"
+// };
 
-// ===== PRODUCTION (uncomment when deploying) =====
+// ===== PRODUCTION (Vercel proxy) =====
 const API_CONFIG = {
-    BASE_URL: fetch('/api/menu')
+    BASE_URL: "/api"   // Requests go to the Vercel proxy endpoint
 };
 
 // ---------- TOKEN HELPERS ----------
@@ -36,7 +36,7 @@ function publicHeaders() {
     };
 }
 
-// ---------- ERROR HANDLING HELPER (Task C2) ----------
+// ---------- ERROR HANDLING HELPER ----------
 function handleApiError(response, result) {
     if (response.status === 401) {
         return "Unauthorized access. Please login again.";
