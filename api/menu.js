@@ -2,9 +2,9 @@
 const { fetchWithCookie } = require('./_utils');
 
 export default async function handler(req, res) {
-    const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/menu';
-
     try {
+        const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/menu';
+
         const fetchOptions = {
             method: req.method,
             headers: {
@@ -30,7 +30,12 @@ export default async function handler(req, res) {
 
         res.status(response.status).json(data);
     } catch (error) {
+        // Return the error as JSON so you can see it in the browser
         console.error('Proxy error:', error);
-        res.status(500).json({ error: 'Proxy error: ' + error.message });
+        res.status(500).json({
+            error: 'Proxy error',
+            message: error.message,
+            stack: error.stack,
+        });
     }
 }
