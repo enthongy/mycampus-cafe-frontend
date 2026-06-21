@@ -9,10 +9,11 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
         };
 
+        // Forward token as a custom header (InfinityFree doesn't strip custom headers)
         const authHeader = req.headers.authorization || req.headers['Authorization'];
-        console.log('POST - Auth header present:', !!authHeader);
         if (authHeader) {
-            headers['Authorization'] = authHeader;
+            const token = authHeader.replace(/^Bearer\s+/i, '');
+            headers['X-Auth-Token'] = token;
         }
 
         const fetchOptions = {
