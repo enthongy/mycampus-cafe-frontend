@@ -1,4 +1,6 @@
 // api/menu/[id].js
+const { fetchWithCookie } = require('../_utils');
+
 export default async function handler(req, res) {
     const { id } = req.query;
     const apiUrl = `https://mycampus-cafe-api.infinityfreeapp.com/api/menu/${id}`;
@@ -8,13 +10,11 @@ export default async function handler(req, res) {
     }
 
     try {
-        const authHeader = req.headers.authorization || req.headers['Authorization'] || '';
-
         const fetchOptions = {
             method: req.method,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': authHeader,
+                ...(req.headers.authorization && { Authorization: req.headers.authorization }),
             },
         };
 
@@ -22,10 +22,20 @@ export default async function handler(req, res) {
             fetchOptions.body = JSON.stringify(req.body);
         }
 
-        const response = await fetch(apiUrl, fetchOptions);
-        const data = await response.json();
+        const response = await fetchWithCookie(apiUrl, fetchOptions);
+
+        const contentType = response.headers.get('content-type') || '';
+        let data;
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            data = { error: 'Unexpected response', details: text };
+        }
+
         res.status(response.status).json(data);
     } catch (error) {
+        console.error('Proxy menu/[id] error:', error);
         res.status(500).json({ error: 'Proxy error: ' + error.message });
     }
 }
