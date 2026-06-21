@@ -1,4 +1,4 @@
-// api/login.js (unchanged – no token needed)
+// api/login.js
 const { fetchWithCookie } = require('./_utils');
 
 export default async function handler(req, res) {
@@ -8,9 +8,10 @@ export default async function handler(req, res) {
 
     try {
         const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/login';
+        const headers = { 'Content-Type': 'application/json' };
         const fetchOptions = {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(req.body),
         };
 
