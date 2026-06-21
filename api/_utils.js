@@ -4,10 +4,6 @@ const crypto = require('crypto');
 let cachedCookie = null;
 let cookieExpiry = 0;
 
-/**
- * Solve InfinityFree anti-bot challenge.
- * Extracts the three hex strings by finding all toNumbers("...") calls in order.
- */
 function solveInfinityFreeChallenge(html) {
     // Find all hex strings inside toNumbers("...")
     const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
@@ -16,7 +12,7 @@ function solveInfinityFreeChallenge(html) {
         return null;
     }
 
-    // The first three matches are: key (a), IV (b), ciphertext (c)
+    // The first three matches are a (key), b (IV), c (ciphertext)
     const keyHex = hexMatches[0][1];
     const ivHex = hexMatches[1][1];
     const cipherHex = hexMatches[2][1];
@@ -54,8 +50,8 @@ async function fetchWithCookie(url, options = {}) {
             options.headers['Cookie'] = `__test=${cookieValue}`;
             response = await fetch(url, options);
         } else {
-            // For debugging: return a snippet of the HTML in the error
-            throw new Error('Failed to solve challenge. Response snippet: ' + html.substring(0, 500));
+            // If decryption fails, return the full HTML (truncated) for debugging
+            throw new Error('Failed to solve challenge. Full response snippet (first 1000 chars): ' + html.substring(0, 1000));
         }
     }
 
