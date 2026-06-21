@@ -5,17 +5,28 @@ let cachedCookie = null;
 let cookieExpiry = 0;
 
 function solveChallenge(html) {
-    // Find all hex strings inside toNumbers("...")
-    const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
-    if (hexMatches.length < 3) {
-        console.error('Found only', hexMatches.length, 'hex strings');
-        return null;
+    // Method 1: Try to find the three hex strings directly
+    // Look for patterns like: a=toNumbers("hex"), b=toNumbers("hex"), c=toNumbers("hex")
+    let match = html.match(/a\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*b\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*c\s*=\s*toNumbers\("([a-f0-9]+)"\)/i);
+    
+    // Method 2: If that fails, find ALL toNumbers("hex") calls and take the first three
+    if (!match) {
+        const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
+        if (hexMatches.length < 3) {
+            console.error('Found only', hexMatches.length, 'hex strings');
+            return null;
+        }
+        const keyHex = hexMatches[0][1];
+        const ivHex = hexMatches[1][1];
+        const cipherHex = hexMatches[2][1];
+        
+        return decryptCookie(keyHex, ivHex, cipherHex);
     }
+    
+    return decryptCookie(match[1], match[2], match[3]);
+}
 
-    const keyHex = hexMatches[0][1];
-    const ivHex = hexMatches[1][1];
-    const cipherHex = hexMatches[2][1];
-
+function decryptCookie(keyHex, ivHex, cipherHex) {
     const key = Buffer.from(keyHex, 'hex');
     const iv = Buffer.from(ivHex, 'hex');
     const ciphertext = Buffer.from(cipherHex, 'hex');
@@ -24,7 +35,6 @@ function solveChallenge(html) {
         // AES-128-CBC with PKCS7 padding (Node.js default)
         const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
         let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-        // Return the decrypted bytes as hex (matching toHex() in the script)
         return decrypted.toString('hex');
     } catch (err) {
         console.error('Decryption error:', err.message);
@@ -51,7 +61,8 @@ async function fetchWithCookie(url, options = {}) {
             options.headers['Cookie'] = `__test=${cookieValue}`;
             response = await fetch(url, options);
         } else {
-            throw new Error('Failed to solve challenge. Response snippet: ' + html.substring(0, 200));
+            // If we can't solve, return a more helpful error
+            throw new Error('Failed to solve challenge. Unable to extract hex strings from HTML.');
         }
     }
 
