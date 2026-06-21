@@ -6,28 +6,29 @@ let cookieExpiry = 0;
 
 /**
  * Solve InfinityFree anti-bot challenge.
- * Extracts the three hex arguments from the slowAES.decrypt call.
+ * Extracts the three hex strings from the 'var a=toNumbers("..."), b=..., c=...' pattern.
  */
 function solveInfinityFreeChallenge(html) {
-    // Look for: slowAES.decrypt(toNumbers("..."), 2, toNumbers("..."), toNumbers("..."))
-    const match = html.match(/slowAES\.decrypt\(\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*2\s*,\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*toNumbers\("([a-f0-9]+)"\)\s*\)/i);
+    // Match: var a=toNumbers("hex1"), b=toNumbers("hex2"), c=toNumbers("hex3");
+    const match = html.match(/var\s+a\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*b\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*c\s*=\s*toNumbers\("([a-f0-9]+)"\)/i);
     if (!match) {
-        console.error('Could not find challenge script');
+        console.error('Could not find challenge variables');
         return null;
     }
 
-    const keyHex = match[1];
-    const ivHex = match[2];
-    const cipherHex = match[3];
+    const keyHex = match[1];   // a (key)
+    const ivHex = match[2];    // b (IV)
+    const cipherHex = match[3]; // c (ciphertext)
 
     const key = Buffer.from(keyHex, 'hex');
     const iv = Buffer.from(ivHex, 'hex');
     const ciphertext = Buffer.from(cipherHex, 'hex');
 
     try {
+        // Use AES-128-CBC (since the key is 16 bytes = 128 bits)
         const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
         let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-        // The result is the hex-encoded plaintext (the __test cookie value)
+        // The decrypted bytes are the __test cookie value (in hex)
         return decrypted.toString('hex');
     } catch (err) {
         console.error('Decryption error:', err.message);
@@ -36,7 +37,7 @@ function solveInfinityFreeChallenge(html) {
 }
 
 async function fetchWithCookie(url, options = {}) {
-    // If we have a valid cached cookie, use it
+    // Add cached cookie if valid
     if (cachedCookie && Date.now() < cookieExpiry) {
         options.headers = options.headers || {};
         options.headers['Cookie'] = `__test=${cachedCookie}`;
@@ -57,7 +58,7 @@ async function fetchWithCookie(url, options = {}) {
             // Retry the request with the cookie
             response = await fetch(url, options);
         } else {
-            // If we couldn't solve, throw an error with the HTML snippet for debugging
+            // If we couldn't solve, throw an error with a snippet for debugging
             throw new Error('Failed to solve challenge. Response started with: ' + html.substring(0, 200));
         }
     }
