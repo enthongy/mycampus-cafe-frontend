@@ -1,7 +1,14 @@
 // js/api.js
+
+// ===== PRODUCTION (Render) =====
 const API_CONFIG = {
-    BASE_URL: "/api"   // All requests go to the Vercel proxy
+    BASE_URL: "https://mycampus-cafe-slim-api-1.onrender.com/api"
 };
+
+// ===== DEVELOPMENT (local) – comment out when deploying =====
+// const API_CONFIG = {
+//     BASE_URL: "http://localhost/mycampus-cafe-slim-api/public/api"
+// };
 
 function getToken() {
     return localStorage.getItem("mycampus_token");
@@ -14,6 +21,7 @@ function setToken(token) {
 function clearToken() {
     localStorage.removeItem("mycampus_token");
 }
+
 function authHeaders() {
     const token = getToken();
     return {
