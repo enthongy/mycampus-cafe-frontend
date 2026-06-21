@@ -1,4 +1,36 @@
 // api/menu.js
+const { solveInfinityFreeChallenge } = require('./solve-challenge');
+
+let cachedCookie = null;
+let cookieExpiry = 0;
+
+async function fetchWithCookie(apiUrl, options) {
+    // If we have a cached cookie, use it
+    if (cachedCookie && Date.now() < cookieExpiry) {
+        options.headers['Cookie'] = `__test=${cachedCookie}`;
+    }
+
+    let response = await fetch(apiUrl, options);
+
+    // Check if response is HTML (anti-bot challenge)
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+        const html = await response.text();
+        const cookieValue = solveInfinityFreeChallenge(html);
+        if (cookieValue) {
+            // Cache the cookie for 6 hours (matching InfinityFree's max-age)
+            cachedCookie = cookieValue;
+            cookieExpiry = Date.now() + 6 * 60 * 60 * 1000;
+
+            // Retry with the cookie
+            options.headers['Cookie'] = `__test=${cookieValue}`;
+            response = await fetch(apiUrl, options);
+        }
+    }
+
+    return response;
+}
+
 export default async function handler(req, res) {
     const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/menu';
 
@@ -11,32 +43,25 @@ export default async function handler(req, res) {
             },
         };
 
-        // Add body for POST requests
         if (req.method === 'POST' && req.body) {
             fetchOptions.body = JSON.stringify(req.body);
         }
 
-        const response = await fetch(apiUrl, fetchOptions);
+        const response = await fetchWithCookie(apiUrl, fetchOptions);
 
-        // Check if response is JSON
-        const contentType = response.headers.get('content-type');
+        // Process response
+        const contentType = response.headers.get('content-type') || '';
         let data;
-        if (contentType && contentType.includes('application/json')) {
+        if (contentType.includes('application/json')) {
             data = await response.json();
         } else {
-            // If not JSON, return the raw text (useful for debugging)
             const text = await response.text();
-            data = { error: 'Unexpected response from backend', details: text };
+            data = { error: 'Unexpected response', details: text };
         }
 
         res.status(response.status).json(data);
     } catch (error) {
-        // Log the error to Vercel logs
         console.error('Proxy error:', error);
-        res.status(500).json({ 
-            error: 'Proxy error', 
-            message: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        res.status(500).json({ error: 'Proxy error: ' + error.message });
     }
 }
