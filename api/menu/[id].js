@@ -1,4 +1,6 @@
 // api/menu/[id].js
+const { fetchWithCookie } = require('../_utils');
+
 export default async function handler(req, res) {
     const { id } = req.query;
     const apiUrl = `https://mycampus-cafe-api.infinityfreeapp.com/api/menu/${id}`;
@@ -20,11 +22,11 @@ export default async function handler(req, res) {
             fetchOptions.body = JSON.stringify(req.body);
         }
 
-        const response = await fetch(apiUrl, fetchOptions);
+        const response = await fetchWithCookie(apiUrl, fetchOptions);
 
-        const contentType = response.headers.get('content-type');
+        const contentType = response.headers.get('content-type') || '';
         let data;
-        if (contentType && contentType.includes('application/json')) {
+        if (contentType.includes('application/json')) {
             data = await response.json();
         } else {
             const text = await response.text();
