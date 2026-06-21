@@ -7,7 +7,7 @@
 
 // ===== PRODUCTION (uncomment when deploying) =====
 const API_CONFIG = {
-    BASE_URL: "http://mycampus-cafe-api.infinityfreeapp.com/api"
+    BASE_URL: "https://mycampus-cafe-api.infinityfreeapp.com/api"
 };
 
 // ---------- TOKEN HELPERS ----------
