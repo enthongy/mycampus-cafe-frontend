@@ -11,9 +11,18 @@ export default async function handler(req, res) {
             body: JSON.stringify(req.body),
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get('content-type');
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            data = { error: 'Unexpected response', details: text };
+        }
+
         res.status(response.status).json(data);
     } catch (error) {
+        console.error('Proxy login error:', error);
         res.status(500).json({ error: 'Proxy error: ' + error.message });
     }
 }
