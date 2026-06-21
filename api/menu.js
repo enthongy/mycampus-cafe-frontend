@@ -19,7 +19,6 @@ export default async function handler(req, res) {
 
         const response = await fetchWithCookie(apiUrl, fetchOptions);
 
-        // Process response
         const contentType = response.headers.get('content-type') || '';
         let data;
         if (contentType.includes('application/json')) {
