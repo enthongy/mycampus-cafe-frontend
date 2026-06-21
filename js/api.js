@@ -1,16 +1,8 @@
 // js/api.js
-
-// ===== PRODUCTION (Vercel proxy) =====
 const API_CONFIG = {
-    BASE_URL: "/api"   // All requests go to the Vercel proxy endpoints
+    BASE_URL: "/api"   // All requests go to the Vercel proxy
 };
 
-// ===== DEVELOPMENT (local) – comment out for production =====
-// const API_CONFIG = {
-//     BASE_URL: "http://localhost/mycampus-cafe-slim-api/public/api"
-// };
-
-// ---------- TOKEN HELPERS ----------
 function getToken() {
     return localStorage.getItem("mycampus_token");
 }
@@ -36,19 +28,10 @@ function publicHeaders() {
     };
 }
 
-// ---------- ERROR HANDLING HELPER ----------
 function handleApiError(response, result) {
-    if (response.status === 401) {
-        return "Unauthorized access. Please login again.";
-    }
-    if (response.status === 403) {
-        return "You are not allowed to perform this operation.";
-    }
-    if (response.status === 404) {
-        return "Requested record was not found.";
-    }
-    if (response.status >= 500) {
-        return "Server error. Please contact administrator.";
-    }
+    if (response.status === 401) return "Unauthorized access. Please login again.";
+    if (response.status === 403) return "You are not allowed to perform this operation.";
+    if (response.status === 404) return "Requested record was not found.";
+    if (response.status >= 500) return "Server error. Please contact administrator.";
     return result.message || "Unexpected error occurred.";
 }
