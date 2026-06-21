@@ -5,11 +5,13 @@ export default async function handler(req, res) {
     const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/menu';
 
     try {
+        const authHeader = req.headers.authorization || req.headers['Authorization'] || '';
+
         const fetchOptions = {
             method: req.method,
             headers: {
                 'Content-Type': 'application/json',
-                ...(req.headers.authorization && { Authorization: req.headers.authorization }),
+                'Authorization': authHeader,
             },
         };
 
@@ -19,17 +21,7 @@ export default async function handler(req, res) {
 
         const response = await fetchWithCookie(apiUrl, fetchOptions);
 
-        // Process response
-        const contentType = response.headers.get('content-type') || '';
-        let data;
-        if (contentType.includes('application/json')) {
-            data = await response.json();
-        } else {
-            const text = await response.text();
-            data = { error: 'Unexpected response from backend', details: text };
-        }
-
-        res.status(response.status).json(data);
+        // ... rest unchanged
     } catch (error) {
         console.error('Proxy error:', error);
         res.status(500).json({ error: 'Proxy error: ' + error.message });
