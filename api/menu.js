@@ -5,15 +5,13 @@ export default async function handler(req, res) {
     try {
         const apiUrl = 'https://mycampus-cafe-api.infinityfreeapp.com/api/menu';
 
-        // Build headers explicitly
+        // Build headers
         const headers = {
             'Content-Type': 'application/json',
         };
 
-        // Log and forward Authorization
+        // Explicitly forward Authorization header
         const authHeader = req.headers.authorization || req.headers['Authorization'];
-        console.log('Incoming Authorization:', authHeader ? 'Present' : 'MISSING');
-
         if (authHeader) {
             headers['Authorization'] = authHeader;
         }
