@@ -8,11 +8,9 @@ function solveInfinityFreeChallenge(html) {
     // Find all hex strings inside toNumbers("...")
     const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
     if (hexMatches.length < 3) {
-        console.error('Found only', hexMatches.length, 'hex strings');
         return null;
     }
 
-    // The first three matches are a (key), b (IV), c (ciphertext)
     const keyHex = hexMatches[0][1];
     const ivHex = hexMatches[1][1];
     const cipherHex = hexMatches[2][1];
@@ -22,12 +20,26 @@ function solveInfinityFreeChallenge(html) {
     const ciphertext = Buffer.from(cipherHex, 'hex');
 
     try {
+        // Try with automatic padding first
         const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
         let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
         return decrypted.toString('hex');
     } catch (err) {
-        console.error('Decryption error:', err.message);
-        return null;
+        // If that fails, try without padding
+        try {
+            const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+            decipher.setAutoPadding(false);
+            let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+            // Remove padding if present
+            const lastByte = decrypted[decrypted.length - 1];
+            if (lastByte > 0 && lastByte <= 16) {
+                decrypted = decrypted.subarray(0, decrypted.length - lastByte);
+            }
+            return decrypted.toString('hex');
+        } catch (err2) {
+            console.error('Both decryption attempts failed:', err2.message);
+            return null;
+        }
     }
 }
 
@@ -50,8 +62,7 @@ async function fetchWithCookie(url, options = {}) {
             options.headers['Cookie'] = `__test=${cookieValue}`;
             response = await fetch(url, options);
         } else {
-            // If decryption fails, return the full HTML (truncated) for debugging
-            throw new Error('Failed to solve challenge. Full response snippet (first 1000 chars): ' + html.substring(0, 1000));
+            throw new Error('Failed to solve challenge. Response snippet: ' + html.substring(0, 200));
         }
     }
 
