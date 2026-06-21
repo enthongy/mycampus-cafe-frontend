@@ -1,72 +1,47 @@
 // api/_utils.js
-const crypto = require('crypto');
+const nodeGetReq = require('node-get-req');
 
 let cachedCookie = null;
 let cookieExpiry = 0;
 
-function solveChallenge(html) {
-    // Method 1: Try to find the three hex strings directly
-    // Look for patterns like: a=toNumbers("hex"), b=toNumbers("hex"), c=toNumbers("hex")
-    let match = html.match(/a\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*b\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*c\s*=\s*toNumbers\("([a-f0-9]+)"\)/i);
-    
-    // Method 2: If that fails, find ALL toNumbers("hex") calls and take the first three
-    if (!match) {
-        const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
-        if (hexMatches.length < 3) {
-            console.error('Found only', hexMatches.length, 'hex strings');
-            return null;
-        }
-        const keyHex = hexMatches[0][1];
-        const ivHex = hexMatches[1][1];
-        const cipherHex = hexMatches[2][1];
-        
-        return decryptCookie(keyHex, ivHex, cipherHex);
-    }
-    
-    return decryptCookie(match[1], match[2], match[3]);
-}
-
-function decryptCookie(keyHex, ivHex, cipherHex) {
-    const key = Buffer.from(keyHex, 'hex');
-    const iv = Buffer.from(ivHex, 'hex');
-    const ciphertext = Buffer.from(cipherHex, 'hex');
-
-    try {
-        // AES-128-CBC with PKCS7 padding (Node.js default)
-        const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
-        let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-        return decrypted.toString('hex');
-    } catch (err) {
-        console.error('Decryption error:', err.message);
-        return null;
-    }
-}
-
 async function fetchWithCookie(url, options = {}) {
+    // Use cached cookie if valid
     if (cachedCookie && Date.now() < cookieExpiry) {
         options.headers = options.headers || {};
         options.headers['Cookie'] = `__test=${cachedCookie}`;
     }
 
-    let response = await fetch(url, options);
-    const contentType = response.headers.get('content-type') || '';
+    try {
+        // Use node-get-req to handle the challenge automatically
+        const response = await nodeGetReq({
+            url: url,
+            method: options.method || 'GET',
+            headers: options.headers || {},
+            data: options.body ? JSON.parse(options.body) : undefined,
+        });
 
-    if (contentType.includes('text/html')) {
-        const html = await response.text();
-        const cookieValue = solveChallenge(html);
-        if (cookieValue) {
-            cachedCookie = cookieValue;
-            cookieExpiry = Date.now() + 6 * 60 * 60 * 1000; // 6 hours
-            options.headers = options.headers || {};
-            options.headers['Cookie'] = `__test=${cookieValue}`;
-            response = await fetch(url, options);
-        } else {
-            // If we can't solve, return a more helpful error
-            throw new Error('Failed to solve challenge. Unable to extract hex strings from HTML.');
+        // Store the cookie for future requests
+        if (response.headers && response.headers['set-cookie']) {
+            const cookieMatch = response.headers['set-cookie'].match(/__test=([^;]+)/);
+            if (cookieMatch) {
+                cachedCookie = cookieMatch[1];
+                cookieExpiry = Date.now() + 6 * 60 * 60 * 1000; // 6 hours
+            }
         }
-    }
 
-    return response;
+        // Return a fetch-like response object
+        return {
+            ok: response.status < 400,
+            status: response.status,
+            headers: {
+                get: (key) => response.headers[key.toLowerCase()]
+            },
+            json: async () => response.data,
+            text: async () => typeof response.data === 'string' ? response.data : JSON.stringify(response.data),
+        };
+    } catch (error) {
+        throw new Error('Proxy error: ' + error.message);
+    }
 }
 
 module.exports = { fetchWithCookie };
