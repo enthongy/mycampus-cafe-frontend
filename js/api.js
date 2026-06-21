@@ -14,11 +14,11 @@ function setToken(token) {
 function clearToken() {
     localStorage.removeItem("mycampus_token");
 }
-
 function authHeaders() {
+    const token = getToken();
     return {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + getToken()
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
     };
 }
 
