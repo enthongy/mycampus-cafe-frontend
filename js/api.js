@@ -1,14 +1,14 @@
 // js/api.js
 
-// ===== DEVELOPMENT =====
+// ===== PRODUCTION (Vercel proxy) =====
+const API_CONFIG = {
+    BASE_URL: "/api"   // All requests go to the Vercel proxy endpoints
+};
+
+// ===== DEVELOPMENT (local) – comment out for production =====
 // const API_CONFIG = {
 //     BASE_URL: "http://localhost/mycampus-cafe-slim-api/public/api"
 // };
-
-// ===== PRODUCTION (Vercel proxy) =====
-const API_CONFIG = {
-    BASE_URL: "/api"   // Requests go to the Vercel proxy endpoint
-};
 
 // ---------- TOKEN HELPERS ----------
 function getToken() {
