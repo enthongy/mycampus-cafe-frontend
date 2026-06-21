@@ -5,13 +5,13 @@ let cachedCookie = null;
 let cookieExpiry = 0;
 
 function solveChallenge(html) {
-    // Method 1: Look for the exact var a=toNumbers("..."), b=..., c=...
+    // Method 1: Exact var a=..., b=..., c=...
     let match = html.match(/var\s+a\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*b\s*=\s*toNumbers\("([a-f0-9]+)"\)\s*,\s*c\s*=\s*toNumbers\("([a-f0-9]+)"\)/i);
     if (match) {
         return { key: match[1], iv: match[2], cipher: match[3] };
     }
 
-    // Method 2: Fallback – find all toNumbers("...") and take the first three
+    // Method 2: Find all toNumbers("...") and take the first three
     const hexMatches = [...html.matchAll(/toNumbers\("([a-f0-9]+)"\)/g)];
     if (hexMatches.length < 3) {
         console.error('Found only', hexMatches.length, 'hex strings');
@@ -31,13 +31,28 @@ function decryptCookie(hexStrings) {
     const iv = Buffer.from(hexStrings.iv, 'hex');
     const ciphertext = Buffer.from(hexStrings.cipher, 'hex');
 
+    // Try with PKCS7 padding (Node.js default)
     try {
         const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
         let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
         return decrypted.toString('hex');
     } catch (err) {
-        console.error('Decryption error:', err.message);
-        return null;
+        // If padding fails, try without padding (assume plaintext is multiple of block size)
+        try {
+            const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+            decipher.setAutoPadding(false);
+            let decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+            // The result should be a hex string; validate it
+            const result = decrypted.toString('hex');
+            if (/^[a-f0-9]+$/.test(result)) {
+                return result;
+            }
+            return null;
+        } catch (err2) {
+            // If both fail, log and return null
+            console.error('Both padding attempts failed:', err2.message);
+            return null;
+        }
     }
 }
 
@@ -64,10 +79,10 @@ async function fetchWithCookie(url, options = {}) {
                 options.headers['Cookie'] = `__test=${cookieValue}`;
                 response = await fetch(url, options);
             } else {
-                throw new Error('Decryption failed. Raw HTML: ' + html.substring(0, 300));
+                // Decryption failed – return a snippet of the HTML for debugging
+                throw new Error('Decryption failed. HTML snippet: ' + html.substring(0, 500));
             }
         } else {
-            // If extraction fails, return the first 500 chars of HTML for debugging
             throw new Error('Could not extract hex strings. HTML snippet: ' + html.substring(0, 500));
         }
     }
